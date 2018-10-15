@@ -15,15 +15,17 @@ uniform int r_max_rand_samples;
 uniform sampler2DArray r_rand_samples;
 
 
+#define R_RAND_TEXTURE_WIDTH 64
+#define R_RAND_TEXTURE_HEIGHT 64
+uniform sampler2D r_rand_texture;
+uniform int r_rand_offset_x;
+uniform int r_rand_offset_y;
+
+
 uniform vec3 r_camera_position;
 uniform mat3 r_camera_orientation;
 
 uniform int r_samples;
-
-//vec3 right = vec3(r_width * 0.001, 0.0, 0.0);
-//vec3 up = vec3(0.0, r_height * 0.001, 0.0);
-//vec3 llc = vec3(-r_width * 0.5 * 0.001, -r_height * 0.5 * 0.001, 0.0);
-//vec3 look_at = vec3(0.0, 0.0, -1.0);
 
 vec3 top_color = vec3(0.5f, 0.7f, 1.0f);
 vec3 zenith_color = vec3(1.0, 1.0, 1.0);
@@ -31,6 +33,28 @@ vec3 zenith_color = vec3(1.0, 1.0, 1.0);
 struct sphere_t
 {
     vec4 center_radius;
+
+	int material_index;
+	int align0;
+	int align1;
+	int align2;
+};
+
+
+#define MAT_MATERIAL_TYPE_LAMBERT 1
+#define MAT_MATERIAL_TYPE_DIELECTRIC 2
+#define MAT_MATERIAL_TYPE_METAL 3
+
+
+
+struct material_t
+{
+    vec4 base;
+
+    int type;
+    float roughness;
+    float refraction;
+    int align1;
 };
 
 struct ray_t
@@ -45,6 +69,8 @@ struct hit_result_t
     vec3 attenuation;
     vec3 point;
     vec3 normal;
+
+    int material_index;
 };
 
 #define MAX_SPHERE_COUNT 16
@@ -55,9 +81,17 @@ sphere_t spheres[MAX_SPHERE_COUNT];
 
 #define R_MAX_SPHERES 64
 uniform int r_sphere_count;
-uniform layout(std140) r_spheres_uniform_buffer
+uniform layout(std140) r_spheres_uniform_block
 {
     sphere_t r_spheres[R_MAX_SPHERES];
+};
+
+
+
+#define MAT_MAX_MATERIALS 32
+uniform layout(std140) r_material_uniform_block
+{
+    material_t r_materials[MAT_MAX_MATERIALS];
 };
 
 
@@ -65,25 +99,122 @@ int rand_sample_index;
 
 float rand_float()
 {
-    //float sample = 0.0;
 
     if(rand_sample_index >= r_max_rand_samples)
     {
         rand_sample_index = 0;
     }
 
-    float s = texture(r_rand_samples, vec3(gl_FragCoord.x / r_width, gl_FragCoord.y / r_height, float(rand_sample_index))).r;
+    float s = texture(r_rand_samples, vec3(gl_FragCoord.x / float(R_RAND_TEXTURE_WIDTH), gl_FragCoord.y / float(R_RAND_TEXTURE_HEIGHT), float(rand_sample_index))).r;
     rand_sample_index++;
     return s;
-
-	//return 0.0;
 }
+
+
+/*float rand_float2()
+{
+    return texture(r_rand_texture, vec2((gl_FragCoord.x + r_rand_offset_x) / float(R_RAND_TEXTURE_WIDTH), (gl_FragCoord.y + r_rand_offset_y) / float(R_RAND_TEXTURE_HEIGHT))).r;
+}*/
 
 vec3 rand_point_on_sphere()
 {
     vec3 p = vec3(rand_float() * 2.0 - 1.0, rand_float() * 2.0 - 1.0, rand_float() * 2.0 - 1.0);
     return normalize(p);
 }
+
+
+/*
+=========================================
+=========================================
+=========================================
+*/
+
+void scatter_lambert(ray_t ray_in, hit_result_t hit_result, out vec3 attenuation, out ray_t scattered)
+{
+    int material_index = hit_result.material_index;
+    vec3 target = hit_result.point + hit_result.normal + rand_point_on_sphere();
+
+    scattered.origin = hit_result.point;
+    scattered.direction = target - scattered.origin;
+    attenuation = r_materials[material_index].base.rgb * 0.5;
+}
+
+void scatter_metal(ray_t ray_in, hit_result_t hit_result, out vec3 attenuation, out ray_t scattered)
+{
+    int material_index = hit_result.material_index;
+    float roughness = r_materials[material_index].roughness;
+
+    vec3 target = hit_result.point + hit_result.normal + rand_point_on_sphere() * roughness;
+
+    scattered.origin = hit_result.point;
+    scattered.direction = target - scattered.origin;
+    attenuation = vec3(1.0);
+}
+
+void scatter_dielectric(ray_t ray_in, hit_result_t hit_result, out vec3 attenuation, out ray_t scattered)
+{
+    int material_index = hit_result.material_index;
+    float refraction = r_materials[material_index].refraction;
+    vec3 outward_normal;
+    vec3 refracted;
+    float ni_over_nt;
+
+    if(dot(ray_in.direction, hit_result.normal) > 0.0)
+    {
+        /* ray and normal point in the same direction, which
+        means it's exiting the dielectric material... */
+
+        outward_normal = -hit_result.normal;
+        ni_over_nt = refraction;
+    }
+    else
+    {
+        /* the ray is entering the object... */
+
+        outward_normal = hit_result.normal;
+        ni_over_nt = 1.0 / refraction;
+    }
+
+    refracted = refract(ray_in.direction, outward_normal, ni_over_nt);
+
+    if(dot(refracted, refracted) == 0.0)
+    {
+        scattered.direction = reflect(ray_in.direction, hit_result.normal);
+    }
+    else
+    {
+        scattered.direction = refracted;
+    }
+
+    scattered.origin = hit_result.point;
+    attenuation = vec3(1.0);
+}
+
+
+void scatter(ray_t ray_in, hit_result_t hit_result, out vec3 attenuation, out ray_t scattered)
+{
+    switch(r_materials[hit_result.material_index].type)
+    {
+        case MAT_MATERIAL_TYPE_LAMBERT:
+            scatter_lambert(ray_in, hit_result, attenuation, scattered);
+        break;
+
+        case MAT_MATERIAL_TYPE_METAL:
+            scatter_metal(ray_in, hit_result, attenuation, scattered);
+        break;
+
+        case MAT_MATERIAL_TYPE_DIELECTRIC:
+            scatter_dielectric(ray_in, hit_result, attenuation, scattered);
+        break;
+    }
+}
+
+
+/*
+=========================================
+=========================================
+=========================================
+*/
 
 
 bool intersect_sphere(ray_t ray, out hit_result_t result, in sphere_t sphere, float t_min, float t_max)
@@ -107,7 +238,7 @@ bool intersect_sphere(ray_t ray, out hit_result_t result, in sphere_t sphere, fl
             result.t = temp;
             result.point = ray.origin + ray.direction * temp;
 			result.normal = (result.point - sphere.center_radius.xyz) / sphere.center_radius.w;
-			//result.material = m_material;
+			result.material_index = sphere.material_index;
 			return true;
 		}
 
@@ -118,7 +249,7 @@ bool intersect_sphere(ray_t ray, out hit_result_t result, in sphere_t sphere, fl
             result.t = temp;
             result.point = ray.origin + ray.direction * temp;
 			result.normal = (result.point - sphere.center_radius.xyz) / sphere.center_radius.w;
-			//result.material = m_material;
+			result.material_index = sphere.material_index;
 			return true;
 		}
 
@@ -168,7 +299,6 @@ vec3 ray_color(ray_t ray)
                 if(temp_result.t < results[bounces].t)
                 {
                     results[bounces] = temp_result;
-                    results[bounces].attenuation = vec3(0.5);
                     hit = true;
                 }
             }
@@ -183,9 +313,8 @@ vec3 ray_color(ray_t ray)
             break;
         }
 
-        rays[bounces + 1].origin = results[bounces].point;
-        vec3 target = results[bounces].point + results[bounces].normal + rand_point_on_sphere();
-        rays[bounces + 1].direction = target - results[bounces].point;
+        scatter(rays[bounces], results[bounces], results[bounces].attenuation, rays[bounces + 1]);
+
     }
 
     if(bounces > 0)
@@ -229,26 +358,11 @@ void main()
 
     int i;
 
-    /*sphere_count = 0;
-    spheres[0].center_radius = vec4(0.0, -0.5, -8.0, 1.0);
-    spheres[1].center_radius = vec4(0.0, -101.2, 0.0, 100.0);*/
-    /*spheres[0].center = vec3(0.0, -0.5, -8.0);
-    spheres[0].radius = 1.0;
-    spheres[1].center = vec3(0.0, -101.2, 0.0);
-    spheres[1].radius = 100.0;*/
-
-    //sphere_count = 2;
-
-
-
-    //ray.origin = vec3(0.0);
     ray.origin = r_camera_position;
-    //ray.direction = dir;
 
     for(i = 0; i < r_samples; i++)
     {
         ray.direction = dir + vec3(rand_float() * 2.0 - 1.0, rand_float() * 2.0 - 1.0, 0.0) * 0.0005;
-        //ray.direction = dir;
         color += ray_color(ray);
     }
 

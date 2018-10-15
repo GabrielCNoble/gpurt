@@ -39,6 +39,8 @@
 		<Unit filename="camera.h" />
 		<Unit filename="main.cpp" />
 		<Unit filename="main.h" />
+		<Unit filename="material.cpp" />
+		<Unit filename="material.h" />
 		<Unit filename="matrix.h" />
 		<Unit filename="render.cpp" />
 		<Unit filename="render.h" />

@@ -24,11 +24,15 @@ struct shader_t
 
     unsigned int r_max_rand_samples;
     unsigned int r_rand_samples;
+    unsigned int r_rand_texture;
+    unsigned int r_rand_offset_x;
+    unsigned int r_rand_offset_y;
 
     unsigned int r_samples;
 
 
     unsigned int r_spheres_uniform_buffer;
+    unsigned int r_materials_uniform_buffer;
     unsigned int r_spheres_count;
 
     char *shader_name;

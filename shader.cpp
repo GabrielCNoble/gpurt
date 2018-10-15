@@ -74,16 +74,9 @@ struct shader_t *shd_LoadShader(const char *file_name)
 
         shd_last_shader = shader;
 
-
         shader->vertex_shader = glCreateShader(GL_VERTEX_SHADER);
         shader->fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
         shader->shader_program = glCreateProgram();
-
-
-
-
-
-
 
         /* #define VERTEX_SHADER... */
         for(i = 0; i < define_len; i++)
@@ -112,17 +105,10 @@ struct shader_t *shd_LoadShader(const char *file_name)
             return NULL;
         }
 
-
-
-
-
-
         for(i = 0; i < define_len; i++)
         {
             file_buffer[i + version_len] = ' ';
         }
-
-        //printf("%s\n", file_buffer);
 
         /* fragment shader... */
         glShaderSource(shader->fragment_shader, 1, &file_buffer, NULL);
@@ -170,6 +156,10 @@ struct shader_t *shd_LoadShader(const char *file_name)
         shader->r_height = glGetUniformLocation(shader->shader_program, "r_height");
         shader->r_max_rand_samples = glGetUniformLocation(shader->shader_program, "r_max_rand_samples");
         shader->r_rand_samples = glGetUniformLocation(shader->shader_program, "r_rand_samples");
+        shader->r_rand_texture = glGetUniformLocation(shader->shader_program, "r_rand_texture");
+        shader->r_rand_offset_x = glGetUniformLocation(shader->shader_program, "r_rand_offset_x");
+        shader->r_rand_offset_y = glGetUniformLocation(shader->shader_program, "r_rand_offset_y");
+
 
         shader->r_camera_position = glGetUniformLocation(shader->shader_program, "r_camera_position");
         shader->r_camera_orientation = glGetUniformLocation(shader->shader_program, "r_camera_orientation");
@@ -179,7 +169,10 @@ struct shader_t *shd_LoadShader(const char *file_name)
 
         shader->r_spheres_count = glGetUniformLocation(shader->shader_program, "r_sphere_count");
         shader->r_spheres_uniform_buffer = glGetUniformBlockIndex(shader->shader_program, "r_sphere_uniform_block");
+        shader->r_materials_uniform_buffer = glGetUniformBlockIndex(shader->shader_program, "r_material_uniform_block");
+
         glUniformBlockBinding(shader->shader_program, shader->r_spheres_uniform_buffer, 0);
+        glUniformBlockBinding(shader->shader_program, shader->r_materials_uniform_buffer, 1);
     }
 
     return shader;

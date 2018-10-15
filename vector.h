@@ -187,10 +187,35 @@ class vec4_t
 
     float m_floats[4];
 
-    vec4_t();
+    vec4_t(){};
 
     vec4_t(float x, float y, float z, float w) {m_floats[0] = x; m_floats[1] = y; m_floats[2] = z; m_floats[3] = w;}
+
+    inline float operator [] (int index) const;
+
+    inline float & operator [] (int index);
+
+    inline vec4_t & operator = (const vec3_t &v);
 };
+
+inline float vec4_t::operator [] (int index) const
+{
+    return m_floats[index];
+}
+
+inline float & vec4_t::operator [] (int index)
+{
+    return m_floats[index];
+}
+
+inline vec4_t & vec4_t::operator = (const vec3_t &v)
+{
+    this->m_floats[0] = v.m_floats[0];
+    this->m_floats[1] = v.m_floats[1];
+    this->m_floats[2] = v.m_floats[2];
+
+    return *this;
+}
 
 
 #endif // VECTOR_H
