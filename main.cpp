@@ -40,8 +40,9 @@ int main(int argc, char *argv[])
     SDL_Event events;
     const Uint8 *keys;
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 
 
     window = SDL_CreateWindow("gpurt", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_OPENGL);
@@ -159,7 +160,7 @@ int main(int argc, char *argv[])
 
 
 
-        r_TestTrace();
+        r_Trace();
 
         SDL_GL_SwapWindow(window);
     }

@@ -49,6 +49,7 @@ struct shader_t *shd_LoadShader(const char *file_name)
         fclose(file);
         file_buffer[define_len + file_len + version_len] = '\0';
 
+        /* #version 400 compatibility... */
         for(i = 0; i < version_len + 1; i++)
         {
             file_buffer[i] = version[i];
@@ -84,7 +85,6 @@ struct shader_t *shd_LoadShader(const char *file_name)
             file_buffer[i + version_len] = define[i];
         }
 
-        //printf("%s\n", file_buffer);
 
         /* vertex shader... */
         glShaderSource(shader->vertex_shader, 1, &file_buffer, NULL);
@@ -168,11 +168,19 @@ struct shader_t *shd_LoadShader(const char *file_name)
 
 
         shader->r_spheres_count = glGetUniformLocation(shader->shader_program, "r_sphere_count");
-        shader->r_spheres_uniform_buffer = glGetUniformBlockIndex(shader->shader_program, "r_sphere_uniform_block");
-        shader->r_materials_uniform_buffer = glGetUniformBlockIndex(shader->shader_program, "r_material_uniform_block");
+        shader->r_spheres_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_sphere_uniform_block");
 
-        glUniformBlockBinding(shader->shader_program, shader->r_spheres_uniform_buffer, 0);
-        glUniformBlockBinding(shader->shader_program, shader->r_materials_uniform_buffer, 1);
+
+        shader->r_materials_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_material_uniform_block");
+
+
+        shader->r_triangles_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_triangle_uniform_block");
+        shader->r_triangles_count = glGetUniformLocation(shader->shader_program, "r_triangle_count");
+
+
+        glUniformBlockBinding(shader->shader_program, shader->r_spheres_uniform_block, 0);
+        glUniformBlockBinding(shader->shader_program, shader->r_materials_uniform_block, 1);
+        glUniformBlockBinding(shader->shader_program, shader->r_triangles_uniform_block, 2);
     }
 
     return shader;

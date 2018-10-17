@@ -1,7 +1,9 @@
 #include "render.h"
 #include "shader.h"
 #include "sphere.h"
+#include "triangle.h"
 #include "material.h"
+#include "vector.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,10 +34,17 @@ unsigned int r_spheres_uniform_buffer;
 unsigned int r_spheres_count;
 struct sphere_t *r_spheres_buffer;
 
+
 unsigned int r_material_uniform_buffer;
 struct material_data_t *r_material_buffer;
 
-int r_samples = 4;
+
+#define R_MAX_TRIANGLES 128
+unsigned int r_triangle_uniform_buffer;
+struct triangle_t *r_triangle_buffer;
+
+
+int r_samples = 1;
 
 struct framebuffer_t
 {
@@ -54,7 +63,7 @@ struct camera_t *r_active_camera = NULL;
 
 void r_Init()
 {
-    trace_test_shader = shd_LoadShader("trace_test.glsl");
+    trace_test_shader = shd_LoadShader("trace.glsl");
 
     float *float_rand_samples;
     float *short_rand_samples;
@@ -80,8 +89,8 @@ void r_Init()
         }
     }
 
-    glGenTextures(1, &rand_samples_texture);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, rand_samples_texture);
+    glGenTextures(1, &r_rand_texture);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, r_rand_texture);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_BASE_LEVEL, 0);
@@ -103,16 +112,33 @@ void r_Init()
     glBufferData(GL_UNIFORM_BUFFER, sizeof(struct material_data_t) * MAT_MAX_MATERIALS, NULL, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
+    glGenBuffers(1, &r_triangle_uniform_buffer);
+    glBindBuffer(GL_UNIFORM_BUFFER, r_triangle_uniform_buffer);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(struct triangle_t) * R_MAX_TRIANGLES, NULL, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
     r_spheres_buffer = (struct sphere_t *)calloc(sizeof(struct sphere_t), R_MAX_SPHERES);
     r_material_buffer = (struct material_data_t *)calloc(sizeof(struct material_data_t), MAT_MAX_MATERIALS);
+    r_triangle_buffer = (struct triangle_t *)calloc(sizeof(struct triangle_t), R_MAX_TRIANGLES);
 }
 
 void r_Finish()
 {
 
+    glDeleteBuffers(1, &r_triangle_uniform_buffer);
+    glDeleteBuffers(1, &r_spheres_uniform_buffer);
+    glDeleteBuffers(1, &r_material_uniform_buffer);
+
+
+    glDeleteTextures(1, &r_rand_texture);
+
+
+    free(r_spheres_buffer);
+    free(r_material_buffer);
+    free(r_triangle_buffer);
 }
 
-void r_TestTrace()
+void r_Trace()
 {
     int rand_offset_x;
     int rand_offset_y;
@@ -122,23 +148,23 @@ void r_TestTrace()
     glUniform1f(trace_test_shader->r_height, (float)window_height);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D_ARRAY, rand_samples_texture);
+    glBindTexture(GL_TEXTURE_2D_ARRAY, r_rand_texture);
     glUniform1i(trace_test_shader->r_rand_samples, 0);
     glUniform1i(trace_test_shader->r_max_rand_samples, R_RAND_SAMPLES);
     glUniform1i(trace_test_shader->r_samples, r_samples);
 
 
-    rand_offset_x = rand() >> 2;
-    rand_offset_y = (rand_offset_x + rand()) % RAND_MAX;
+    //rand_offset_x = rand() >> 2;
+    //rand_offset_y = (rand_offset_x + rand()) % RAND_MAX;
 
-    glUniform1i(trace_test_shader->r_rand_offset_x, rand_offset_x);
-    glUniform1i(trace_test_shader->r_rand_offset_y, rand_offset_y);
+    //glUniform1i(trace_test_shader->r_rand_offset_x, rand_offset_x);
+    //glUniform1i(trace_test_shader->r_rand_offset_y, rand_offset_y);
 
 
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, r_rand_texture);
-    glUniform1i(trace_test_shader->r_rand_texture, 1);
+    //glActiveTexture(GL_TEXTURE1);
+    //glBindTexture(GL_TEXTURE_2D, r_rand_texture);
+    //glUniform1i(trace_test_shader->r_rand_texture, 1);
 
     /*r_spheres_buffer[0].center_radius = (float [4]){0.0, -0.5, -8.0, 1.0};
     r_spheres_buffer[1].center_radius = (float [4]){0.0, -101.2, 0.0, 100.0};*/
@@ -149,34 +175,36 @@ void r_TestTrace()
     static float yaw = 0.0;*/
 
     r_spheres_buffer[0].center_radius[0] = 0.0;
-    r_spheres_buffer[0].center_radius[1] = -0.5 + sin(f);
+    r_spheres_buffer[0].center_radius[1] = 0.9 + sin(f);
     r_spheres_buffer[0].center_radius[2] = 0.0;
     r_spheres_buffer[0].center_radius[3] = 1.4;
     r_spheres_buffer[0].material_index = 0;
 
-    r_spheres_buffer[1].center_radius[0] = 0.0;
+    /*r_spheres_buffer[1].center_radius[0] = 0.0;
     r_spheres_buffer[1].center_radius[1] = -101.3;
     r_spheres_buffer[1].center_radius[2] = 0.0;
     r_spheres_buffer[1].center_radius[3] = 100.0;
-    r_spheres_buffer[1].material_index = 1;
+    r_spheres_buffer[1].material_index = 1;*/
 
-    r_spheres_buffer[2].center_radius[0] = 4.8;
+    r_spheres_buffer[1].center_radius[0] = 4.8;
+    r_spheres_buffer[1].center_radius[1] = 0.5;
+    r_spheres_buffer[1].center_radius[2] = 0.0;
+    r_spheres_buffer[1].center_radius[3] = 1.0;
+    r_spheres_buffer[1].material_index = 2;
+
+    r_spheres_buffer[2].center_radius[0] = -2.8;
     r_spheres_buffer[2].center_radius[1] = 0.5;
-    r_spheres_buffer[2].center_radius[2] = 0.0;
+    r_spheres_buffer[2].center_radius[2] = 2.0;
     r_spheres_buffer[2].center_radius[3] = 1.0;
-    r_spheres_buffer[2].material_index = 2;
+    r_spheres_buffer[2].material_index = 3;
 
-    r_spheres_buffer[3].center_radius[0] = -2.8;
-    r_spheres_buffer[3].center_radius[1] = 0.5;
+    /*r_spheres_buffer[3].center_radius[0] = 20.8;
+    r_spheres_buffer[3].center_radius[1] = 40.5;
     r_spheres_buffer[3].center_radius[2] = 2.0;
-    r_spheres_buffer[3].center_radius[3] = 1.0;
-    r_spheres_buffer[3].material_index = 3;
+    r_spheres_buffer[3].center_radius[3] = 8.0;
+    r_spheres_buffer[3].material_index = 3;*/
 
-    r_spheres_buffer[4].center_radius[0] = 20.8;
-    r_spheres_buffer[4].center_radius[1] = 0.5;
-    r_spheres_buffer[4].center_radius[2] = 2.0;
-    r_spheres_buffer[4].center_radius[3] = 8.0;
-    r_spheres_buffer[4].material_index = 3;
+    glUniform1i(trace_test_shader->r_spheres_count, 3);
 
 
     r_material_buffer[0].base = vec4_t(0.0, 1.0, 0.0, 1.0);
@@ -194,46 +222,53 @@ void r_TestTrace()
     r_material_buffer[3].type = MAT_MATERIAL_TYPE_LAMBERT;
     r_material_buffer[3].refrection = 1.2;
 
-   /* mat3_t pitch_matrix;
-    mat3_t yaw_matrix;
+    r_material_buffer[4].base = vec4_t(0.0, 0.0, 1.0, 1.0);
+    r_material_buffer[4].type = MAT_MATERIAL_TYPE_LAMBERT;
+    r_material_buffer[4].refrection = 1.2;
 
-    pitch_matrix.identity();
-    yaw_matrix.identity();*/
+    r_material_buffer[5].base = vec4_t(0.0, 0.0, 1.0, 1.0);
+    r_material_buffer[5].roughness = 0.2;
+    r_material_buffer[5].type = MAT_MATERIAL_TYPE_METAL;
+    r_material_buffer[5].refrection = 1.2;
 
 
-    //pitch = -0.02;
+    #define FLOOR_SIZE 50.0
+    #define FLOOR_Y -1.5
 
-    //pitch_matrix.rotate_x(pitch, 1);
-    //yaw_matrix.rotate_y(yaw, 1);
+    r_triangle_buffer[0].verts[0] = vec4_t(0.0, 6.0, 3.0, 0.0);
+    r_triangle_buffer[0].verts[1] = vec4_t(-5.0, 1.5, 3.0, 0.0);
+    r_triangle_buffer[0].verts[2] = vec4_t(5.0, 1.5, 3.0, 0.0);
+    r_triangle_buffer[0].material_index = 4;
 
-    //r_active_camera->position[1] = sin(r);
-    //r_active_camera->orientation.identity();
-    //r_active_camera->orientation.rotate_y(-0.03, 1);
-    //r_active_camera->orientation = yaw_matrix * pitch_matrix;
+    r_triangle_buffer[1].verts[0] = vec4_t(-FLOOR_SIZE, FLOOR_Y, -FLOOR_SIZE, 0.0);
+    r_triangle_buffer[1].verts[1] = vec4_t(-FLOOR_SIZE, FLOOR_Y, FLOOR_SIZE, 0.0);
+    r_triangle_buffer[1].verts[2] = vec4_t(FLOOR_SIZE, FLOOR_Y, FLOOR_SIZE, 0.0);
+    r_triangle_buffer[1].material_index = 1;
+
+    r_triangle_buffer[2].verts[0] = vec4_t(FLOOR_SIZE, FLOOR_Y, FLOOR_SIZE, 0.0);
+    r_triangle_buffer[2].verts[1] = vec4_t(FLOOR_SIZE, FLOOR_Y, -FLOOR_SIZE, 0.0);
+    r_triangle_buffer[2].verts[2] = vec4_t(-FLOOR_SIZE, FLOOR_Y, -FLOOR_SIZE, 0.0);
+    r_triangle_buffer[2].material_index = 1;
+
+    glUniform1i(trace_test_shader->r_triangles_count, 3);
 
     f += 0.09;
     //r += 0.02;
-
-    //glBindBuffer(GL_UNIFORM_BUFFER, r_spheres_uniform_buffer);
-    //glBindBufferRange(GL_UNIFORM_BUFFER, 0, r_spheres_uniform_buffer, 0, sizeof(struct sphere_t) * R_MAX_SPHERES);
-    //glBindBufferRange(GL_UNIFORM_BUFFER, 1, r_material_uniform_buffer, 0, sizeof(struct material_data_t ) * MAT_MAX_MATERIALS);
 
     glBindBuffer(GL_UNIFORM_BUFFER, r_spheres_uniform_buffer);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(struct sphere_t) * R_MAX_SPHERES, r_spheres_buffer);
 
     glBindBuffer(GL_UNIFORM_BUFFER, r_material_uniform_buffer);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(struct material_data_t) * MAT_MAX_MATERIALS, r_material_buffer);
+
+    glBindBuffer(GL_UNIFORM_BUFFER, r_triangle_uniform_buffer);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(struct triangle_t) * R_MAX_TRIANGLES, r_triangle_buffer);
+
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, r_spheres_uniform_buffer);
     glBindBufferBase(GL_UNIFORM_BUFFER, 1, r_material_uniform_buffer);
-
-
-
-    //glBindBufferBase(GL_UNIFORM_BUFFER, 0, r_spheres_uniform_buffer);
-    //glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(struct sphere_t) * R_MAX_SPHERES, r_spheres_buffer);
-
-    glUniform1i(trace_test_shader->r_spheres_count, 5);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 2, r_triangle_uniform_buffer);
 
     glUniform3fv(trace_test_shader->r_camera_position, 1, r_active_camera->position.m_floats);
     glUniformMatrix3fv(trace_test_shader->r_camera_orientation, 1, GL_FALSE, (float *)r_active_camera->orientation.m_floats);

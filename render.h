@@ -7,7 +7,7 @@ void r_Init();
 
 void r_Finish();
 
-void r_TestTrace();
+void r_Trace();
 
 void r_SetActiveCamera(struct camera_t *camera);
 
