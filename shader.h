@@ -31,15 +31,14 @@ struct shader_t
     unsigned int r_samples;
 
 
-    unsigned int r_spheres_uniform_block;
     unsigned int r_spheres_count;
-
-
-    unsigned int r_materials_uniform_block;
-
-
-    unsigned int r_triangles_uniform_block;
     unsigned int r_triangles_count;
+
+    unsigned int r_spheres_uniform_block;
+    unsigned int r_materials_uniform_block;
+    unsigned int r_triangles_uniform_block;
+    unsigned int r_vertex_uniform_block;
+
 
 
     char *shader_name;

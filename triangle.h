@@ -1,7 +1,8 @@
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
 
-#include "vector.h"
+//#include "vector.h"
+/*#include "r_common.h"
 
 struct triangle_t
 {
@@ -11,7 +12,7 @@ struct triangle_t
     int align0;
     int align1;
     int align2;
-};
+};*/
 
 
 #endif // TRIANGLE_H

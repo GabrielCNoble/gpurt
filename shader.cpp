@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "r_common.h"
+
 
 static const char version[] = "#version 400 compatibility\n";
 static const int version_len = sizeof(version) - 1;
@@ -168,19 +170,32 @@ struct shader_t *shd_LoadShader(const char *file_name)
 
 
         shader->r_spheres_count = glGetUniformLocation(shader->shader_program, "r_sphere_count");
-        shader->r_spheres_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_sphere_uniform_block");
-
-
-        shader->r_materials_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_material_uniform_block");
-
-
-        shader->r_triangles_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_triangle_uniform_block");
         shader->r_triangles_count = glGetUniformLocation(shader->shader_program, "r_triangle_count");
 
+        shader->r_spheres_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_sphere_uniform_block");
+        shader->r_materials_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_material_uniform_block");
+        shader->r_triangles_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_triangle_uniform_block");
+        shader->r_vertex_uniform_block = glGetUniformBlockIndex(shader->shader_program, "r_vertex_uniform_block");
 
-        glUniformBlockBinding(shader->shader_program, shader->r_spheres_uniform_block, 0);
-        glUniformBlockBinding(shader->shader_program, shader->r_materials_uniform_block, 1);
-        glUniformBlockBinding(shader->shader_program, shader->r_triangles_uniform_block, 2);
+        if(shader->r_spheres_uniform_block != GL_INVALID_INDEX)
+        {
+            glUniformBlockBinding(shader->shader_program, shader->r_spheres_uniform_block, R_SPHERE_UNIFORM_BLOCK_BINDING);
+        }
+
+        if(shader->r_materials_uniform_block != GL_INVALID_INDEX)
+        {
+            glUniformBlockBinding(shader->shader_program, shader->r_materials_uniform_block, R_MATERIAL_UNIFORM_BLOCK_BINDING);
+        }
+
+        if(shader->r_triangles_uniform_block != GL_INVALID_INDEX)
+        {
+            glUniformBlockBinding(shader->shader_program, shader->r_triangles_uniform_block, R_TRIANGLE_UNIFORM_BLOCK_BINDING);
+        }
+
+        if(shader->r_vertex_uniform_block != GL_INVALID_INDEX)
+        {
+            glUniformBlockBinding(shader->shader_program, shader->r_vertex_uniform_block, R_VERTICE_UNIFORM_BLOCK_BINDING);
+        }
     }
 
     return shader;

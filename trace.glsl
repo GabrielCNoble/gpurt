@@ -42,13 +42,26 @@ struct sphere_t
 
 struct triangle_t
 {
+    /*int vertices[3];
+    int material_index;*/
+    ivec4 vertices_material;
+};
+
+struct vertex_t
+{
+    vec4 position;
+    vec4 normal;
+};
+
+/*struct triangle_t
+{
     vec4 verts[3];
 
     int material_index;
     int align0;
     int align1;
     int align2;
-};
+};*/
 
 #define MAT_MATERIAL_TYPE_LAMBERT 1
 #define MAT_MATERIAL_TYPE_DIELECTRIC 2
@@ -113,6 +126,13 @@ uniform layout(std140) r_triangle_uniform_block
 };
 
 
+#define R_MAX_VERTICES 512
+uniform layout(std140) r_vertex_uniform_block
+{
+    vertex_t r_vertices[R_MAX_VERTICES];
+};
+
+
 int rand_sample_index;
 
 float rand_float()
@@ -162,7 +182,8 @@ void scatter_metal(ray_t ray_in, hit_result_t hit_result, out vec3 attenuation, 
     int material_index = hit_result.material_index;
     float roughness = r_materials[material_index].roughness;
 
-    vec3 target = hit_result.point + hit_result.normal + rand_point_on_sphere() * roughness;
+    //vec3 target = hit_result.point + hit_result.normal + rand_point_on_sphere() * roughness;
+    vec3 target = hit_result.point + reflect(ray_in.direction, hit_result.normal) + rand_point_on_sphere() * roughness;
 
     scattered.origin = hit_result.point;
     scattered.direction = target - scattered.origin;
@@ -195,11 +216,11 @@ void scatter_dielectric(ray_t ray_in, hit_result_t hit_result, out vec3 attenuat
 
     refracted = refract(ray_in.direction, outward_normal, ni_over_nt);
 
-    if(dot(refracted, refracted) == 0.0)
-    {
-        scattered.direction = reflect(ray_in.direction, hit_result.normal);
-    }
-    else
+    //if(dot(refracted, refracted) == 0.0)
+    //{
+    //    scattered.direction = reflect(ray_in.direction, hit_result.normal);
+   // }
+   // else
     {
         scattered.direction = refracted;
     }
@@ -235,8 +256,8 @@ void scatter(ray_t ray_in, hit_result_t hit_result, out vec3 attenuation, out ra
 */
 
 #define T_MAX 1000.0
-#define T_MIN 0.0001
-#define MAX_BOUNCES 4
+#define T_MIN 0.001
+#define MAX_BOUNCES 8
 
 bool intersect_sphere(ray_t ray, out hit_result_t result, in sphere_t sphere, float t_min, float t_max)
 {
@@ -304,10 +325,10 @@ bool intersect_triangle(ray_t ray, out hit_result_t result, triangle_t triangle,
     float w;
 
 
-    e0 = triangle.verts[1].xyz - triangle.verts[0].xyz;
-    e1 = triangle.verts[2].xyz - triangle.verts[1].xyz;
-
-    normal = normalize(cross(e0, e1));
+    e0 = r_vertices[triangle.vertices_material[1]].position.xyz - r_vertices[triangle.vertices_material[0]].position.xyz;
+    e1 = r_vertices[triangle.vertices_material[2]].position.xyz - r_vertices[triangle.vertices_material[1]].position.xyz;
+    normal = r_vertices[triangle.vertices_material[0]].normal.xyz;
+    //normal = normalize(cross(e0, e1));
 
     d = dot(ray.direction, normal);
 
@@ -315,7 +336,7 @@ bool intersect_triangle(ray_t ray, out hit_result_t result, triangle_t triangle,
     {
         //direction_len = length(ray.direction);
 
-        v0 = triangle.verts[0].xyz - ray.origin;
+        v0 = r_vertices[triangle.vertices_material[0]].position.xyz - ray.origin;
 
         t = dot(normal, v0) / d;
 
@@ -325,8 +346,8 @@ bool intersect_triangle(ray_t ray, out hit_result_t result, triangle_t triangle,
             point = ray.origin + ray.direction * t;
             //e2 = triangle.verts[0].xyz - triangle.verts[2].xyz;
 
-            a0 = dot(normal, cross(e0, point - triangle.verts[1].xyz));
-            a1 = dot(normal, cross(e1, point - triangle.verts[2].xyz));
+            a0 = dot(normal, cross(e0, point - r_vertices[triangle.vertices_material[1]].position.xyz));
+            a1 = dot(normal, cross(e1, point - r_vertices[triangle.vertices_material[2]].position.xyz));
             //a2 = dot(normal, cross(e2, point - triangle.verts[0].xyz)) * 0.5;
             at = dot(normal, cross(e0, e1));
 
@@ -344,7 +365,7 @@ bool intersect_triangle(ray_t ray, out hit_result_t result, triangle_t triangle,
                         result.t = t;
                         result.point = point;
                         result.normal = normal;
-                        result.material_index = triangle.material_index;
+                        result.material_index = triangle.vertices_material[3];
                         return true;
                     }
                 }
@@ -368,7 +389,7 @@ bool intersect_world(ray_t ray, out hit_result_t result, float t_min, float t_ma
     temp_result.t = T_MAX;
     result.t = T_MAX;
 
-    for(i = 0; i < r_sphere_count; i++)
+   /* for(i = 0; i < r_sphere_count; i++)
     {
         if(intersect_sphere(ray, temp_result, r_spheres[i], t_min, t_max))
         {
@@ -378,7 +399,7 @@ bool intersect_world(ray_t ray, out hit_result_t result, float t_min, float t_ma
                 hit = true;
             }
         }
-    }
+    }*/
 
     for(i = 0; i < r_triangle_count; i++)
     {
@@ -458,7 +479,7 @@ vec3 ray_color(ray_t ray)
     //return
 }
 
-#define SAMPLES 8
+#define SAMPLES 5
 
 void main()
 {

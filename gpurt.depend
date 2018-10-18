@@ -15,19 +15,19 @@
 	"vector.h"
 	<math.h>
 
-1539723608 source:d:\files\gabriel noble\compiler\gpurt\main.cpp
+1539832763 source:d:\files\gabriel noble\compiler\gpurt\main.cpp
 	"main.h"
 	"vector.h"
 	"matrix.h"
 
-1538753459 d:\files\gabriel noble\compiler\gpurt\main.h
+1539816416 d:\files\gabriel noble\compiler\gpurt\main.h
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
 	"SDL2/SDL.h"
 	"GL/glew.h"
 	"shader.h"
-	"render.h"
+	"r_render.h"
 
 1501554715 d:\files\gabriel noble\compiler\gpurt\sdl\include\sdl2\sdl.h
 	"SDL_main.h"
@@ -355,9 +355,9 @@
 	<OpenGL/glu.h>
 	<GL/glu.h>
 
-1539720685 d:\files\gabriel noble\compiler\gpurt\shader.h
+1539826375 d:\files\gabriel noble\compiler\gpurt\shader.h
 
-1538788541 d:\files\gabriel noble\compiler\gpurt\render.h
+1539727362 d:\files\gabriel noble\compiler\gpurt\render.h
 	"camera.h"
 
 1539592360 source:d:\files\gabriel noble\compiler\gpurt\material.cpp
@@ -389,10 +389,36 @@
 1539720863 d:\files\gabriel noble\compiler\gpurt\triangle.h
 	"vector.h"
 
-1539720777 source:d:\files\gabriel noble\compiler\gpurt\shader.cpp
+1539827724 source:d:\files\gabriel noble\compiler\gpurt\shader.cpp
 	"shader.h"
 	"GL/glew.h"
 	<stdio.h>
 	<string.h>
 	<stdlib.h>
+	"r_common.h"
+
+1539830228 source:d:\files\gabriel noble\compiler\gpurt\r_render.cpp
+	"r_render.h"
+	"shader.h"
+	"sphere.h"
+	"material.h"
+	"vector.h"
+	<stdlib.h>
+	<stdio.h>
+	<math.h>
+	"GL/glew.h"
+	<vector>
+
+1539816076 d:\files\gabriel noble\compiler\gpurt\r_render.h
+	"r_common.h"
+	"camera.h"
+
+1539827442 d:\files\gabriel noble\compiler\gpurt\r_common.h
+	"vector.h"
+
+1539817181 source:d:\files\gabriel noble\compiler\gpurt\model.cpp
+	"model.h"
+
+1539817420 d:\files\gabriel noble\compiler\gpurt\model.h
+	"r_common.h"
 
